@@ -89,7 +89,7 @@ struct thread
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
-
+    
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
@@ -100,6 +100,12 @@ struct thread
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
+
+    int64_t time_to_wakeup;             /* time to wake up if the thread goes to blocked state*/
+    struct lock *waiting_lock;          /* to store the address of the lock*/
+    struct list_elem donation_list_element;
+    struct list donation_list;
+    int base_priority;                  /* priority at the begining */
   };
 
 /* If false (default), use round-robin scheduler.
@@ -138,4 +144,12 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
+
+
+// static bool less_time_to_wake_up (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
+// void thread_sleep(int64_t ticks);
+// void thread_wake_up(void);
+/* static bool cmp_priority (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);*/
+void update_priority(void);
+void donate_priority(void);
 #endif /* threads/thread.h */

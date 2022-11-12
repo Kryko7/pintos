@@ -133,7 +133,58 @@ pintos_init (void)
     /* Run actions specified on kernel command line. */
     run_actions (argv);
   } else {
-    // TODO: no command line passed to kernel. Run interactively 
+    // TODO: no command line passed to kernel. Run interactively
+    while(1)
+    {
+      printf("CS2033>");
+      char* input = (char * )calloc(50, sizeof(char));
+      input_init();
+      int i = 0;
+      char c;
+      while(c = (input_getc()))
+      {
+        if(c == '\r')
+        {
+          printf("\n");
+          break;
+        }
+        input[i] = c;
+        printf("%c", c);
+        i++;
+      }
+      if(!strcmp(input, "whoami"))
+      {
+        printf("%s\n", "Minindu Thiranjaya - 200546G");
+      }
+      else if(!strcmp(input, "shutdown"))
+      {
+        shutdown_power_off();
+      }
+      else if(!strcmp(input, "time"))
+      {
+        printf("%lus\n", rtc_get_time());
+      }
+      else if(!strcmp(input, "ram"))
+      {
+        printf("%dKB\n", init_ram_pages * 4);
+      }
+      else if(!strcmp(input, "thread"))
+      {
+        thread_print_stats();
+      }
+      else if(!strcmp(input, "priority"))
+      {
+        printf("%i\n", thread_get_priority());
+      }
+      else if(!strcmp(input, "exit"))
+      {
+        printf("Exiting from the Iteractive Shell\n");
+        break;
+      }
+      else {
+        printf("Invalid Command!\n");
+      }
+    }
   }
 
   /* Finish up. */
