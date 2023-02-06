@@ -462,6 +462,14 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
+
+  // #ifdef USERPROG
+  // t->child_load_status = 0;
+  // lock_init (&t->lock_child);
+  // cond_init (&t->cond_child);
+  // list_init (&t->children);
+  // #endif
+
   t->magic = THREAD_MAGIC;
 
   old_level = intr_disable ();

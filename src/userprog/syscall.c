@@ -66,7 +66,7 @@ extern bool running;
 void
 syscall_init (void) 
 {
-  printf("syscall_init\n");
+  // printf("syscall_init\n");
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
   list_init(&open_files);
   lock_init(&fs_lock);
@@ -97,6 +97,12 @@ syscall_handler (struct intr_frame *f UNUSED)
 	case SYS_EXIT:
 	{
 		exit(args[0]);
+    // int status = *((int *) f->esp + 1);
+    // struct thread *t = thread_current();
+    // t->status = status;
+    // //process_exit();
+    // thread_exit();
+    // printf("%s: exit(%d)\n", t->name, status);
 		break;
 	}
 	
@@ -164,6 +170,12 @@ syscall_handler (struct intr_frame *f UNUSED)
 		break;
 	}
 
+  case SYS_CLOSE:
+  {
+    close(args[0]);
+    break;
+  }
+
 
 	default:
 		break;
@@ -205,6 +217,7 @@ exit(int status)
 				lock_acquire(&parent->lock_child);
 				child->is_exit_called = true;
 				child->child_exit_status = status;
+        cond_signal(&parent->cond_child, &parent->lock_child);
 				lock_release(&parent->lock_child);
 			}
 		}

@@ -35,7 +35,7 @@ process_execute (const char *file_name)
   struct thread *cur;
   struct child_status *child;
 
-  printf("process_execute: %s\n", file_name);
+  // printf("process_execute: %s\n", file_name);
   // parse the file name
   char *programe_name , *save_ptr;
   programe_name = palloc_get_page(0);
@@ -59,19 +59,19 @@ process_execute (const char *file_name)
   tid = thread_create (programe_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy);
-  else 
-  { 
-      cur = thread_current ();
-      child = calloc (1, sizeof *child);
-      if (child != NULL) 
-      {
-        child->child_id = tid;
-        child->is_exit_called = false;
-        child->has_been_waited = false;
-        printf(&child->elem_child_status);
-        list_push_back(&cur->children, &child->elem_child_status);
-      }
-    }
+  // else 
+  // { 
+  //     cur = thread_current ();
+  //     child = calloc (1, sizeof *child);
+  //     if (child != NULL) 
+  //     {
+  //       child->child_id = tid;
+  //       child->is_exit_called = false;
+  //       child->has_been_waited = false;
+  //       printf(&child->elem_child_status);
+  //       list_push_back(&cur->children, &child->elem_child_status);
+  //     }
+  //   }
   return tid;
 }
 
@@ -83,9 +83,9 @@ start_process (void *file_name_)
   char *file_name = file_name_;
   struct intr_frame if_;
   bool success;
-  int load_status;
+  // int load_status;
   
-  printf ("#3 foo\n");
+  // printf ("#3 foo\n");
   
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
@@ -97,29 +97,29 @@ start_process (void *file_name_)
   //hex_dump(if_.esp , if_.esp , PHYS_BASE - if_.esp , true);
   
   /* If load failed, quit. */
-  // palloc_free_page (file_name);
-  // if (!success) 
-  //   thread_exit ();
-  printf ("#2 foo\n");
-  if (!success) 
-    load_status = -1;
-  else
-    load_status = 1;
-
-  struct thread *cur = thread_current();
-  struct thread *parent = thread_get_by_id(cur->parent_id);
-  if (parent != NULL) {
-    lock_acquire(&parent->lock_child);
-    parent->child_load_status = load_status;
-    cond_signal(&parent->cond_child, &parent->lock_child);
-    lock_release(&parent->lock_child);
-  }
-
+  palloc_free_page (file_name);
   if (!success) 
     thread_exit ();
+  // printf ("#2 foo\n");
+  // if (!success) 
+  //   load_status = -1;
+  // else
+  //   load_status = 1;
 
-  printf("start_process: %s\n", file_name);
-  palloc_free_page (pg_round_down(file_name));
+  // struct thread *cur = thread_current();
+  // struct thread *parent = thread_get_by_id(cur->parent_id);
+  // if (parent != NULL) {
+  //   lock_acquire(&parent->lock_child);
+  //   parent->child_load_status = load_status;
+  //   cond_signal(&parent->cond_child, &parent->lock_child);
+  //   lock_release(&parent->lock_child);
+  // }
+
+  // if (!success) 
+  //   thread_exit ();
+
+  // printf("start_process: %s\n", file_name);
+  // palloc_free_page (pg_round_down(file_name));
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -156,50 +156,48 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-  // while (1)
+  for (int i = 0; i < 100000; i++)
+    thread_yield ();
+  return -1;
+  // int status;
+  // struct thread *cur;
+  // struct child_status *child;
+  // struct list_elem *e;
+  // if(child_tid == TID_ERROR)
   // {
-  //   thread_yield();
+  //   status = TID_ERROR;
   // }
-  // return -1;
-  int status;
-  struct thread *cur;
-  struct child_status *child;
-  struct list_elem *e;
-  if(child_tid == TID_ERROR)
-  {
-    status = TID_ERROR;
-  }
-  else
-  {
-    cur = thread_current();
-    e = list_tail(&cur->children);
-    while ((e = list_prev(e)) != list_head (&cur->children))
-    {
-      child = list_entry(e, struct child_status, elem_child_status);
-      if (child->child_id == child_tid)
-        break;
-    }
+  // else
+  // {
+  //   cur = thread_current();
+  //   e = list_tail(&cur->children);
+  //   while ((e = list_prev(e)) != list_head (&cur->children))
+  //   {
+  //     child = list_entry(e, struct child_status, elem_child_status);
+  //     if (child->child_id == child_tid)
+  //       break;
+  //   }
 
-    if (child == NULL)
-      status =  -1;
-    else
-    {
-      lock_acquire(&cur->lock_child);
-      while (thread_get_by_id(child_tid) != NULL)
-      {
-        cond_wait(&cur->cond_child, &cur->lock_child);
-      }
-      if (child->is_exit_called || child->has_been_waited)
-        status = -1;
-      else
-      {
-        status = child->child_exit_status;
-        child->has_been_waited = true;
-      }
-      lock_release(&cur->lock_child);
-    }
-  }
-  return status;
+  //   if (child == NULL)
+  //     status =  -1;
+  //   else
+  //   {
+  //     lock_acquire(&cur->lock_child);
+  //     while (thread_get_by_id(child_tid) != NULL)
+  //     {
+  //       cond_wait(&cur->cond_child, &cur->lock_child);
+  //     }
+  //     if (child->is_exit_called || child->has_been_waited)
+  //       status = -1;
+  //     else
+  //     {
+  //       status = child->child_exit_status;
+  //       child->has_been_waited = true;
+  //     }
+  //     lock_release(&cur->lock_child);
+  //   }
+  // }
+  // return status;
 }
 
 /* Free the current process's resources. */
@@ -208,12 +206,12 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
-  struct list_elem *e;
-  struct child_status *child;
-  struct thread *parent;
-  struct list_elem *f;
+  // struct list_elem *e;
+  // struct child_status *child;
+  // struct thread *parent;
+  // struct list_elem *f;
 
-  printf("%s: exit(%d) \n", cur->name, cur->status);
+  printf("%s: exit(%d)\n", cur->name, cur->status);
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
@@ -232,33 +230,33 @@ process_exit (void)
     }
   
   // free children list
-  e = list_begin(&cur->children);
-  while (e != list_tail(&cur->children))
-  {
-    f = list_next(e);
-    child = list_entry(e, struct child_status, elem_child_status);
-    list_remove(e);
-    free(child);
-    e = f;
-  }
+  // e = list_begin(&cur->children);
+  // while (e != list_tail(&cur->children))
+  // {
+  //   f = list_next(e);
+  //   child = list_entry(e, struct child_status, elem_child_status);
+  //   list_remove(e);
+  //   free(child);
+  //   e = f;
+  // }
 
-  // re-enabling file's writability
-  if (cur->exec_file != NULL)
-  {
-    file_allow_write(cur->exec_file);
-  }
+  // // re-enabling file's writability
+  // if (cur->exec_file != NULL)
+  // {
+  //   file_allow_write(cur->exec_file);
+  // }
 
-  // close all files
-  close_file_by_owner(cur->tid);
+  // // close all files
+  // close_file_by_owner(cur->tid);
 
-  parent = thread_get_by_id(cur->parent_id);
-  if (parent != NULL)
-  {
-    lock_acquire(&parent->lock_child);
-    parent->child_load_status = -1;
-    cond_signal(&parent->cond_child, &parent->lock_child);
-    lock_release(&parent->lock_child);
-  }
+  // parent = thread_get_by_id(cur->parent_id);
+  // if (parent != NULL)
+  // {
+  //   lock_acquire(&parent->lock_child);
+  //   parent->child_load_status = -1;
+  //   cond_signal(&parent->cond_child, &parent->lock_child);
+  //   lock_release(&parent->lock_child);
+  // }
 }
 
 /* Sets up the CPU for running user code in the current
