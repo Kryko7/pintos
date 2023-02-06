@@ -19,13 +19,7 @@
 #include "threads/loader.h"
 
 
-struct file_descriptor
-{
-  int fd_num;
-  tid_t owner;
-  struct file *file_struct;
-  struct list_elem elem;
-};
+
 
 #define STDIN_FILENO 0
 #define STDOUT_FILENO 1
@@ -53,7 +47,7 @@ static void syscall_close(int fd);
 
 
 /* Helper functions*/
-static struct file_descriptor *get_open_file (int);
+static struct file_desc *get_open_file (int);
 static void close_open_file (int);
 bool is_valid_ptr(const void *);
 static int allocate_fd (void);
@@ -292,7 +286,7 @@ int
 syscall_open (const char *file_name)
 {
   struct file *f;
-  struct file_descriptor *fd;
+  struct file_desc *fd;
   int status = -1;
   
   if (!is_valid_ptr (file_name))
@@ -317,7 +311,7 @@ syscall_open (const char *file_name)
 int
 syscall_filesize (int fd)
 {
-  struct file_descriptor *fd_struct;
+  struct file_desc *fd_struct;
   int status = -1;
   lock_acquire (&fs_lock); 
   fd_struct = get_open_file (fd);
@@ -330,7 +324,7 @@ syscall_filesize (int fd)
 int
 syscall_read (int fd, void *buffer, unsigned size)
 {
-  struct file_descriptor *fd_struct;
+  struct file_desc *fd_struct;
   int status = 0; 
 
   if (!is_valid_ptr (buffer) || !is_valid_ptr (buffer + size - 1))
@@ -371,7 +365,7 @@ syscall_read (int fd, void *buffer, unsigned size)
 int
 syscall_write (int fd, const void *buffer, unsigned size)
 {
-  struct file_descriptor *fd_struct;  
+  struct file_desc *fd_struct;  
   int status = 0;
 
   if (!is_valid_ptr (buffer) || !is_valid_ptr (buffer + size - 1))
@@ -403,7 +397,7 @@ syscall_write (int fd, const void *buffer, unsigned size)
 void 
 syscall_seek (int fd, unsigned position)
 {
-  struct file_descriptor *fd_struct;
+  struct file_desc *fd_struct;
   lock_acquire (&fs_lock); 
   fd_struct = get_open_file (fd);
   if (fd_struct != NULL)
@@ -416,7 +410,7 @@ syscall_seek (int fd, unsigned position)
 unsigned 
 syscall_tell (int fd)
 {
-  struct file_descriptor *fd_struct;
+  struct file_desc *fd_struct;
   int status = 0;
   lock_acquire (&fs_lock); 
   fd_struct = get_open_file (fd);
@@ -429,7 +423,7 @@ syscall_tell (int fd)
 void 
 syscall_close (int fd)
 {
-  struct file_descriptor *fd_struct;
+  struct file_desc *fd_struct;
   lock_acquire (&fs_lock); 
   fd_struct = get_open_file (fd);
   if (fd_struct != NULL && fd_struct->owner == thread_current ()->tid)
@@ -439,15 +433,15 @@ syscall_close (int fd)
 }
 
 
-struct file_descriptor *
+struct file_desc *
 get_open_file (int fd)
 {
   struct list_elem *e;
-  struct file_descriptor *fd_struct; 
+  struct file_desc *fd_struct; 
   e = list_tail (&open_files);
   while ((e = list_prev (e)) != list_head (&open_files)) 
     {
-      fd_struct = list_entry (e, struct file_descriptor, elem);
+      fd_struct = list_entry (e, struct file_desc, elem);
       if (fd_struct->fd_num == fd)
 	return fd_struct;
     }
@@ -459,12 +453,12 @@ close_open_file (int fd)
 {
   struct list_elem *e;
   struct list_elem *prev;
-  struct file_descriptor *fd_struct; 
+  struct file_desc *fd_struct; 
   e = list_end (&open_files);
   while (e != list_head (&open_files)) 
     {
       prev = list_prev (e);
-      fd_struct = list_entry (e, struct file_descriptor, elem);
+      fd_struct = list_entry (e, struct file_desc, elem);
       if (fd_struct->fd_num == fd)
 	{
 	  list_remove (e);
