@@ -108,43 +108,53 @@ syscall_handler (struct intr_frame *f UNUSED)
 	
 	case SYS_EXEC:
 	{
-		f->eax = exec((const char*) args[0]);
+    const char *cmd_line = (const char *) args[0];
+		f->eax = exec(cmd_line);
 		break;
 	}
 
 	case SYS_WAIT:
 	{
-		f->eax = process_wait(args[0]);
+    pid_t pid = (pid_t) args[0];
+		f->eax = process_wait(pid);
 		break;
 	}
 
 	case SYS_CREATE:
 	{
-		f->eax = create((const char*) args[0], args[1]);
+    const char *file = (const char *) args[0];
+    unsigned initial_size = (unsigned) args[1];
+		f->eax = create(file, initial_size);
 		break;
 	}
 
 	case SYS_REMOVE:
 	{
-		f->eax = remove((const char*) args[0]);
+    const char *file = (const char *) args[0];
+		f->eax = remove(file);
 		break;
 	}
 
 	case SYS_OPEN:
 	{
-		f->eax = open((const char*) args[0]);
+    const char *file = (const char *) args[0];
+		f->eax = open(file);
 		break;
 	}
 
 	case SYS_FILESIZE:
 	{
-		f->eax = filesize(args[0]);
+    int fd = (int) args[0];
+		f->eax = filesize(fd);
 		break;
 	}
 
 	case SYS_READ:
 	{
-		f->eax = read(args[0], (void*) args[1], args[2]);
+    int fd = (int) args[0];
+    void *buffer = (void *) args[1];
+    unsigned size = (unsigned) args[2];
+		f->eax = read(fd, buffer, size);
 		break;
 	}
 
@@ -160,19 +170,23 @@ syscall_handler (struct intr_frame *f UNUSED)
 
 	case SYS_SEEK:
 	{
-		seek(args[0], args[1]);
+    int fd = (int) args[0];
+    unsigned position = (unsigned) args[1];
+		seek(fd, position);
 		break;
 	}
 
 	case SYS_TELL:
 	{
-		f->eax = tell(args[0]);
+    int fd = (int) args[0];
+		f->eax = tell(fd);
 		break;
 	}
 
   case SYS_CLOSE:
   {
-    close(args[0]);
+    int fd = (int) args[0];
+    close(fd);
     break;
   }
 
