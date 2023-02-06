@@ -57,7 +57,7 @@ static struct file_descriptor *get_open_file (int);
 static void close_open_file (int);
 bool is_valid_ptr(const void *);
 static int allocate_fd (void);
-void close_file_by_owner(tid_t);
+// void close_by_owner(tid_t);
 static bool is_valid_uvaddr(const void *uvaddr);
 // static inline bool is_user_vaddr (const void *vaddr);
 
@@ -478,13 +478,13 @@ close_open_file (int fd)
 }
 
 
-/* The kernel must be very careful about doing so, because the user can
- * pass a null pointer, a pointer to unmapped virtual memory, or a pointer
- * to kernel virtual address space (above PHYS_BASE). All of these types of
- * invalid pointers must be rejected without harm to the kernel or other
- * running processes, by terminating the offending process and freeing
- * its resources.
- */
+
+
+/*
+  * Checks if the pointer is valid
+  * Returns true if the pointer is valid
+  * Returns false if the pointer is invalid
+*/
 bool
 is_valid_ptr (const void *usr_ptr)
 {
@@ -497,42 +497,47 @@ is_valid_ptr (const void *usr_ptr)
   return false;
 }
 
-// static inline bool
-// is_user_vaddr (const void *vaddr) 
-// {
-//   return vaddr < PHYS_BASE;
-// }
 
+/*
+  * Checks if the pointer is valid
+  * Returns true if the pointer is valid
+  * Returns false if the pointer is invalid
+*/
 static bool
 is_valid_uvaddr (const void *uvaddr)
 {
   return (uvaddr != NULL && is_user_vaddr (uvaddr));
 }
 
+
+/*
+  * aloocates a new file descriptor
+*/
 int
 allocate_fd ()
 {
-  static int fd_current = 1;
-  return ++fd_current;
+  static int fd_cur = 1;
+  fd_cur++;
+  return fd_cur;
 }
 
-void
-close_file_by_owner (tid_t tid)
-{
-  struct list_elem *e;
-  struct list_elem *next;
-  struct file_descriptor *fd_struct; 
-  e = list_begin (&open_files);
-  while (e != list_tail (&open_files)) 
-    {
-      next = list_next (e);
-      fd_struct = list_entry (e, struct file_descriptor, elem);
-      if (fd_struct->owner == tid)
-      {
-        list_remove (e);
-        file_close (fd_struct->file_struct);
-              free (fd_struct);
-      }
-      e = next;
-    }
-}
+// void
+// close_by_owner (tid_t tid)
+// {
+//   struct list_elem *e;
+//   struct list_elem *next;
+//   struct file_descriptor *fd_struct; 
+//   e = list_begin (&open_files);
+//   while (e != list_tail (&open_files)) 
+//     {
+//       next = list_next (e);
+//       fd_struct = list_entry (e, struct file_descriptor, elem);
+//       if (fd_struct->owner == tid)
+//       {
+//         list_remove (e);
+//         file_close (fd_struct->file_struct);
+//               free (fd_struct);
+//       }
+//       e = next;
+//     }
+// }
