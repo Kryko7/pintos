@@ -37,19 +37,19 @@ struct list open_files;
 
 struct lock fs_lock;
 
-int write(int fd, const void* buffer, unsigned size);
-void exit(int status);
+int syscall_write(int fd, const void* buffer, unsigned size);
+void syscall_exit(int status);
 static void syscall_handler (struct intr_frame *);
-static pid_t exec(const char *cmd_line);
-static int wait(pid_t pid);
-static int read(int fd, void *buffer, unsigned size);
-static bool create(const char *file, unsigned initial_size);
-static bool remove(const char *file);
-static int open(const char *file);
-static int filesize(int fd);
-static void seek(int fd, unsigned position);
-static unsigned tell(int fd);
-static void close(int fd);
+static pid_t syscall_exec(const char *cmd_line);
+static int syscall_wait(pid_t pid);
+static int syscall_read(int fd, void *buffer, unsigned size);
+static bool syscall_create(const char *file, unsigned initial_size);
+static bool syscall_remove(const char *file);
+static int syscall_open(const char *file);
+static int syscall_filesize(int fd);
+static void syscall_seek(int fd, unsigned position);
+static unsigned syscall_tell(int fd);
+static void syscall_close(int fd);
 
 
 /* Helper functions*/
@@ -79,7 +79,7 @@ syscall_handler (struct intr_frame *f UNUSED)
 	if (!is_valid_ptr (esp) || !is_valid_ptr (esp + 1) ||
       !is_valid_ptr (esp + 2) || !is_valid_ptr (esp + 3))
     {
-      exit (-1);
+      syscall_exit (-1);
     } 
 	else {
 	uint32_t* args = ((uint32_t*) f->esp);
@@ -96,12 +96,12 @@ syscall_handler (struct intr_frame *f UNUSED)
 	
 	case SYS_EXIT:
 	{
-		exit(args[0]);
-    // int status = *((int *) f->esp + 1);
-    // struct thread *t = thread_current();
-    // t->status = status;
-    // //process_exit();
-    // thread_exit();
+		// syscall_exit(args[0]);
+    int status = *((int *) f->esp + 1);
+    struct thread *t = thread_current();
+    t->status = status;
+    //process_exit();
+    thread_exit();
     // printf("%s: exit(%d)\n", t->name, status);
 		break;
 	}
@@ -109,7 +109,7 @@ syscall_handler (struct intr_frame *f UNUSED)
 	case SYS_EXEC:
 	{
     const char *cmd_line = (const char *) args[0];
-		f->eax = exec(cmd_line);
+		f->eax = syscall_exec(cmd_line);
 		break;
 	}
 
@@ -124,28 +124,28 @@ syscall_handler (struct intr_frame *f UNUSED)
 	{
     const char *file = (const char *) args[0];
     unsigned initial_size = (unsigned) args[1];
-		f->eax = create(file, initial_size);
+		f->eax = syscall_create(file, initial_size);
 		break;
 	}
 
 	case SYS_REMOVE:
 	{
     const char *file = (const char *) args[0];
-		f->eax = remove(file);
+		f->eax = syscall_remove(file);
 		break;
 	}
 
 	case SYS_OPEN:
 	{
     const char *file = (const char *) args[0];
-		f->eax = open(file);
+		f->eax = syscall_open(file);
 		break;
 	}
 
 	case SYS_FILESIZE:
 	{
     int fd = (int) args[0];
-		f->eax = filesize(fd);
+		f->eax = syscall_filesize(fd);
 		break;
 	}
 
@@ -154,7 +154,7 @@ syscall_handler (struct intr_frame *f UNUSED)
     int fd = (int) args[0];
     void *buffer = (void *) args[1];
     unsigned size = (unsigned) args[2];
-		f->eax = read(fd, buffer, size);
+		f->eax = syscall_read(fd, buffer, size);
 		break;
 	}
 
@@ -164,7 +164,7 @@ syscall_handler (struct intr_frame *f UNUSED)
 		void *buffer = (void *) args[1];
 		unsigned size = args[2];
 
-		f->eax = write(fd, buffer, size);
+		f->eax = syscall_write(fd, buffer, size);
 		break;
 	}
 
@@ -172,21 +172,21 @@ syscall_handler (struct intr_frame *f UNUSED)
 	{
     int fd = (int) args[0];
     unsigned position = (unsigned) args[1];
-		seek(fd, position);
+		syscall_seek(fd, position);
 		break;
 	}
 
 	case SYS_TELL:
 	{
     int fd = (int) args[0];
-		f->eax = tell(fd);
+		f->eax = syscall_tell(fd);
 		break;
 	}
 
   case SYS_CLOSE:
   {
     int fd = (int) args[0];
-    close(fd);
+    syscall_close(fd);
     break;
   }
 
@@ -215,7 +215,7 @@ syscall_handler (struct intr_frame *f UNUSED)
 // }
 
 void
-exit(int status)
+syscall_exit(int status)
 {
 	struct thread *cur = thread_current();
 	struct child_status *child;
@@ -240,13 +240,13 @@ exit(int status)
 }
 
 pid_t
-exec (const char *cmd_line)
+syscall_exec (const char *cmd_line)
 {
   tid_t tid;
   struct thread *cur = thread_current();
 
   if (!is_valid_ptr(cmd_line))
-	exit(-1);
+	  syscall_exit(-1);
 
 cur->child_load_status = 0;
 tid = process_execute(cmd_line);
@@ -260,12 +260,12 @@ return tid;
 }
 
 bool
-create (const char *file_name, unsigned size)
+syscall_create (const char *file_name, unsigned size)
 {
   bool status;
 
   if (!is_valid_ptr (file_name))
-    exit (-1);
+    syscall_exit (-1);
 
   lock_acquire (&fs_lock);
   status = filesys_create(file_name, size);  
@@ -276,11 +276,11 @@ create (const char *file_name, unsigned size)
 
 
 bool 
-remove (const char *file_name)
+syscall_remove (const char *file_name)
 {
   bool status;
   if (!is_valid_ptr (file_name))
-    exit (-1);
+    syscall_exit (-1);
 
   lock_acquire (&fs_lock);  
   status = filesys_remove (file_name);
@@ -289,14 +289,14 @@ remove (const char *file_name)
 }
 
 int
-open (const char *file_name)
+syscall_open (const char *file_name)
 {
   struct file *f;
   struct file_descriptor *fd;
   int status = -1;
   
   if (!is_valid_ptr (file_name))
-    exit (-1);
+    syscall_exit (-1);
 
   lock_acquire (&fs_lock); 
  
@@ -315,7 +315,7 @@ open (const char *file_name)
 }
 
 int
-filesize (int fd)
+syscall_filesize (int fd)
 {
   struct file_descriptor *fd_struct;
   int status = -1;
@@ -328,13 +328,13 @@ filesize (int fd)
 }
 
 int
-read (int fd, void *buffer, unsigned size)
+syscall_read (int fd, void *buffer, unsigned size)
 {
   struct file_descriptor *fd_struct;
   int status = 0; 
 
   if (!is_valid_ptr (buffer) || !is_valid_ptr (buffer + size - 1))
-    exit (-1);
+    syscall_exit (-1);
 
   lock_acquire (&fs_lock); 
   
@@ -369,13 +369,13 @@ read (int fd, void *buffer, unsigned size)
 }
 
 int
-write (int fd, const void *buffer, unsigned size)
+syscall_write (int fd, const void *buffer, unsigned size)
 {
   struct file_descriptor *fd_struct;  
   int status = 0;
 
   if (!is_valid_ptr (buffer) || !is_valid_ptr (buffer + size - 1))
-    exit (-1);
+    syscall_exit (-1);
 
   lock_acquire (&fs_lock); 
 
@@ -401,7 +401,7 @@ write (int fd, const void *buffer, unsigned size)
 
 
 void 
-seek (int fd, unsigned position)
+syscall_seek (int fd, unsigned position)
 {
   struct file_descriptor *fd_struct;
   lock_acquire (&fs_lock); 
@@ -414,7 +414,7 @@ seek (int fd, unsigned position)
 
 
 unsigned 
-tell (int fd)
+syscall_tell (int fd)
 {
   struct file_descriptor *fd_struct;
   int status = 0;
@@ -427,7 +427,7 @@ tell (int fd)
 }
 
 void 
-close (int fd)
+syscall_close (int fd)
 {
   struct file_descriptor *fd_struct;
   lock_acquire (&fs_lock); 
