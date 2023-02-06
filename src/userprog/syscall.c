@@ -1,5 +1,4 @@
 
-
 #include "userprog/syscall.h"
 #include <stdio.h>
 #include <syscall-nr.h>
@@ -25,11 +24,9 @@
 #define STDOUT_FILENO 1
 
 
-// #define	PHYS_BASE ((void *) LOADER_PHYS_BASE)
-
 struct list open_files; 
 
-struct lock fs_lock;
+struct lock filesys_lock;
 
 int syscall_write(int fd, const void* buffer, unsigned size);
 void syscall_exit(int status);
@@ -50,10 +47,8 @@ static void syscall_close(int fd);
 static struct file_desc *get_open_file (int);
 static void close_open_file (int);
 bool is_valid_ptr(const void *);
-static int allocate_fd (void);
-// void close_by_owner(tid_t);
+static int allocate_fd (void);;
 static bool is_valid_uvaddr(const void *uvaddr);
-// static inline bool is_user_vaddr (const void *vaddr);
 
 extern bool running;
 
@@ -63,7 +58,7 @@ syscall_init (void)
   // printf("syscall_init\n");
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
   list_init(&open_files);
-  lock_init(&fs_lock);
+  lock_init(&filesys_lock);
 }
 
 static void
@@ -261,9 +256,9 @@ syscall_create (const char *file_name, unsigned size)
   if (!is_valid_ptr (file_name))
     syscall_exit (-1);
 
-  lock_acquire (&fs_lock);
+  lock_acquire (&filesys_lock);
   status = filesys_create(file_name, size);  
-  lock_release (&fs_lock);
+  lock_release (&filesys_lock);
   return status;
 }
 
@@ -276,9 +271,9 @@ syscall_remove (const char *file_name)
   if (!is_valid_ptr (file_name))
     syscall_exit (-1);
 
-  lock_acquire (&fs_lock);  
+  lock_acquire (&filesys_lock);  
   status = filesys_remove (file_name);
-  lock_release (&fs_lock);
+  lock_release (&filesys_lock);
   return status;
 }
 
@@ -292,7 +287,7 @@ syscall_open (const char *file_name)
   if (!is_valid_ptr (file_name))
     syscall_exit (-1);
 
-  lock_acquire (&fs_lock); 
+  lock_acquire (&filesys_lock); 
  
   f = filesys_open (file_name);
   if (f != NULL)
@@ -304,7 +299,7 @@ syscall_open (const char *file_name)
       list_push_back (&open_files, &fd->elem);
       status = fd->fd_num;
     }
-  lock_release (&fs_lock);
+  lock_release (&filesys_lock);
   return status;
 }
 
@@ -313,11 +308,11 @@ syscall_filesize (int fd)
 {
   struct file_desc *fd_struct;
   int status = -1;
-  lock_acquire (&fs_lock); 
+  lock_acquire (&filesys_lock); 
   fd_struct = get_open_file (fd);
   if (fd_struct != NULL)
     status = file_length (fd_struct->file_struct);
-  lock_release (&fs_lock);
+  lock_release (&filesys_lock);
   return status;
 }
 
@@ -330,11 +325,11 @@ syscall_read (int fd, void *buffer, unsigned size)
   if (!is_valid_ptr (buffer) || !is_valid_ptr (buffer + size - 1))
     syscall_exit (-1);
 
-  lock_acquire (&fs_lock); 
+  lock_acquire (&filesys_lock); 
   
   if (fd == STDOUT_FILENO)
     {
-      lock_release (&fs_lock);
+      lock_release (&filesys_lock);
       return -1;
     }
 
@@ -350,7 +345,7 @@ syscall_read (int fd, void *buffer, unsigned size)
           counter--; 
         }
       *buf = 0;
-      lock_release (&fs_lock);
+      lock_release (&filesys_lock);
       return (size - counter);
     } 
   
@@ -358,7 +353,7 @@ syscall_read (int fd, void *buffer, unsigned size)
   if (fd_struct != NULL)
     status = file_read (fd_struct->file_struct, buffer, size);
 
-  lock_release (&fs_lock);
+  lock_release (&filesys_lock);
   return status;
 }
 
@@ -371,25 +366,25 @@ syscall_write (int fd, const void *buffer, unsigned size)
   if (!is_valid_ptr (buffer) || !is_valid_ptr (buffer + size - 1))
     syscall_exit (-1);
 
-  lock_acquire (&fs_lock); 
+  lock_acquire (&filesys_lock); 
 
   if (fd == STDIN_FILENO)
     {
-      lock_release(&fs_lock);
+      lock_release(&filesys_lock);
       return -1;
     }
 
   if (fd == STDOUT_FILENO)
     {
       putbuf (buffer, size);
-      lock_release(&fs_lock);
+      lock_release(&filesys_lock);
       return size;
     }
  
   fd_struct = get_open_file (fd);
   if (fd_struct != NULL)
     status = file_write (fd_struct->file_struct, buffer, size);
-  lock_release (&fs_lock);
+  lock_release (&filesys_lock);
   return status;
 }
 
@@ -397,12 +392,11 @@ syscall_write (int fd, const void *buffer, unsigned size)
 void 
 syscall_seek (int fd, unsigned position)
 {
-  struct file_desc *fd_struct;
-  lock_acquire (&fs_lock); 
-  fd_struct = get_open_file (fd);
+  lock_acquire (&filesys_lock); 
+  struct file_desc *fd_struct = get_open_file (fd);
   if (fd_struct != NULL)
     file_seek (fd_struct->file_struct, position);
-  lock_release (&fs_lock);
+  lock_release (&filesys_lock);
   return ;
 }
 
@@ -410,25 +404,23 @@ syscall_seek (int fd, unsigned position)
 unsigned 
 syscall_tell (int fd)
 {
-  struct file_desc *fd_struct;
   int status = 0;
-  lock_acquire (&fs_lock); 
-  fd_struct = get_open_file (fd);
+  lock_acquire (&filesys_lock); 
+  struct file_desc *fd_struct = get_open_file (fd);
   if (fd_struct != NULL)
     status = file_tell (fd_struct->file_struct);
-  lock_release (&fs_lock);
+  lock_release (&filesys_lock);
   return status;
 }
 
 void 
 syscall_close (int fd)
 {
-  struct file_desc *fd_struct;
-  lock_acquire (&fs_lock); 
-  fd_struct = get_open_file (fd);
+  lock_acquire (&filesys_lock); 
+  struct file_desc *fd_struct = get_open_file (fd);
   if (fd_struct != NULL && fd_struct->owner == thread_current ()->tid)
     close_open_file (fd);
-  lock_release (&fs_lock);
+  lock_release (&filesys_lock);
   return ; 
 }
 
@@ -436,9 +428,8 @@ syscall_close (int fd)
 struct file_desc *
 get_open_file (int fd)
 {
-  struct list_elem *e;
   struct file_desc *fd_struct; 
-  e = list_tail (&open_files);
+  struct list_elem *e = list_tail (&open_files);
   while ((e = list_prev (e)) != list_head (&open_files)) 
     {
       fd_struct = list_entry (e, struct file_desc, elem);
@@ -451,10 +442,9 @@ get_open_file (int fd)
 void
 close_open_file (int fd)
 {
-  struct list_elem *e;
   struct list_elem *prev;
   struct file_desc *fd_struct; 
-  e = list_end (&open_files);
+  struct list_elem *e = list_end (&open_files);
   while (e != list_head (&open_files)) 
     {
       prev = list_prev (e);
