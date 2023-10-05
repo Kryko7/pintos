@@ -2,6 +2,14 @@
 #define USERPROG_PROCESS_H
 
 #include "threads/thread.h"
+#include "threads/synch.h"
+#include "filesys/file.h"
+#include "filesys/filesys.h"
+#include "filesys/directory.h"
+#include "filesys/inode.h"
+#include "userprog/syscall.h"
+
+
 
 tid_t process_execute (const char *file_name);
 int process_wait (tid_t);
